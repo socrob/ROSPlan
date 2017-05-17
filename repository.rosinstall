@@ -1,0 +1,8 @@
+- git:
+    local-name: mongodb_store
+    uri: https://github.com/socrob/mongodb_store.git
+    version: kinetic-mongo-cxx-driver-26compat
+- git:
+    local-name: mongo-cxx-driver
+    uri: https://github.com/socrob/mongo-cxx-driver.git
+    version: 26compat
