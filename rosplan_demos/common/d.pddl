@@ -1,106 +1,195 @@
-(define (domain hri_contingent)
+(define (domain robocupathome)
 	(:requirements :strips :typing :disjunctive-preconditions)
 
-
-	(:types
-		;; text displayed to the user
-		statement question
-	)
-
+	(:types room)
 
 	(:predicates
-	
-		;; the following text can be given to the user
-		(available_q ?t - question)
-		(available_s ?t - statement)
 
-		;; the statement has been given
-		(given ?t - statement)
+		(inapt)
+		(outdoor)
 
-		;; once a is given b is available
-		(follows_s_s ?b - statement ?a - statement)
-		(follows_q_s ?b - statement ?a - question)
-		(follows_s_q ?b - question ?a - statement)
-		(follows_q_q ?b - question ?a - question)
+		(entrance ?r - room)	
+		(pos ?r - room)
+		(wasRoom ?r - room)
 
-		;; the token initiates a wait
-		(pauses ?t - statement)
+		(Kperson ?r - room)
+		(enabledpd)
+		(enabledph)
+		(cancallperson)
 
-		;; we are ready to give statements
-		(r_HRIreceived)
-		(r_HRInotreceived)
+		(persondetected)
+		(personhere)
+		(personwillcome)
+		(personfollowed)
 
-		;; the token might be available
-		(available_to_check_s ?t - statement)
-		(available_to_check_q ?t - question)
+		(Kdrink)
+		(drinkserved)
 	)
 	
-	;; Display text; from actions:
-	;; display_init
-	;; display_text_welcome
-	;; display_text_@N
-	;; display_text_greet
-	;; display_text_goodbye
-	;; display_image_@N
-	(:action display_text
-		:parameters (?t - statement)
+	(:constants
+		entrance - room
+	)
+
+	;; goto_maindoor - pre: not inapt  post: outdoor
+	(:action goto_maindoor
+		:parameters ( )
+		:precondition (not (inapt))
+		:effect (and
+			(outdoor)
+			))
+
+	;; enter_maindoor - pre: outdoor  post: inapt
+	(:action enter_maindoor
+		:parameters ( )
 		:precondition (and
-				(r_HRIreceived)
-				(available_s ?t)
+			(outdoor)
+			(not (inapt))
 			)
 		:effect (and
-			(given ?t)
-			(not (available_s ?t))
-			(when (pauses ?t) (not (r_HRIreceived)))
-			(when (pauses ?t) (r_HRInotreceived))
-			(forall (?u - statement) (when (follows_s_s ?u ?t) (available_s ?u)))
-			(forall (?u - question) (when (follows_s_q ?u ?t) (available_q ?u)))
-			)
-	)
+			(not (outdoor))
+			(inapt)
+			(pos entrance)
+			))
 
-	;; Ask for something; from actions:
-	;; ask_whichcontinent; / waitfor_continent_@C;
-	;; ask_whichcountry_@C; / waitfor_country_@N;
-	;; ask_wantphoto; / waitfor_no;
-	(:action ask_question
-		:parameters (?q - question)
+	;; exit_maindoor - pre: inapt  post: not inapt
+	(:action enter_maindoor
+		:parameters ( )
 		:precondition (and
-			(r_HRIreceived)
-			(available_q ?q)
+			(inapt)
+			(not (outdoor))
 			)
 		:effect (and
-			(not (available_q ?q))
-			(forall (?u - statement) (when (follows_q_s ?u ?q) (available_to_check_s ?u)))
-			(forall (?u - question) (when (follows_q_q ?u ?q) (available_to_check_q ?u)))
+			(not (inapt))
+			(outdoor)
+			))
+
+	;; goto_roomX - pre: inapt  post: inapt and pos=RoomX and wasRoomX
+	(:action goto
+		:parameters (?from ?to - room)
+		:precondition (and
+			(inapt)
+			(pos ?from)
 			)
-	)
+		:effect (and
+			(not (pos ?from))
+			(pos ?to)
+			(wasRoom ?to)
+			))
 
-	;; Check user response
-	(:action check_response_q
-		:parameters (?q - question)
-		:precondition (available_to_check_q ?q)
-		:observe (available_q ?q)
-	)
+	;; lookforperson - pre: pos=RoomX and Kperson=RoomX  post: enabledpd
+	(:action lookforperson
+		:parameters (?r - room)
+		:precondition (and
+			(pos ?r)
+			(Kperson ?r)
+			)
+		:effect (and
+			(enabledpd)
+			))
 
-	;; Check user response
-	(:action check_response_s
-		:parameters (?q - statement)
-		:precondition (available_to_check_s ?q)
-		:observe (available_s ?q)
-	)
+	;; approachperson - pre: persondetected  post: enabledph
+	(:action approachperson
+		:parameters (?r - room)
+		:precondition (persondetected)
+		:effect (and
+			(enabledpd)
+			))
 
-	;; Wait for something (not question answers); from actions:
-	;; waitfor_HRIreceived;
-	;; waitfor_screentouched;
-	;; waitfor_personhere
-	(:action wait_for_hri
+	;; say_comehere - pre: inapt and not persondetected and cancallperson  post: enabledph
+	(:action say_comehere
 		:parameters ()
-		:precondition (r_HRInotreceived)
-		:effect (and
-			(r_HRIreceived)
-			(not (r_HRInotreceived))
+		:precondition (and
+			(not (persondetected))
+			(inapt)
+			(cancallperson)
 			)
+		:effect (and
+			(enabledpd)
+			))
+
+	;; sense_persondetected - pre: enabledpd  post: observe[persondetected]
+	(:action sense_persondetected
+		:parameters ()
+		:precondition (enabledpd)
+		:observe (persondetected)
 	)
+
+	;; sense_personhere - pre: enabledph  post: observe[persondhere]
+	(:action sense_personhere
+		:parameters ()
+		:precondition (enabledpd)
+		:observe (personhere)
+	)
+
+	;; sense_inapt - pre:    post: observe[inapt]
+	(:action sense_personhere
+		:parameters ()
+		:precondition (outdoor)
+		:observe (inapt)
+	)
+
+	;; waitfor_personhere1 - pre: enabledph  post: persondhere
+	(:action waitfor_personhere
+		:parameters ()
+		:precondition (and
+			(enabledph)
+			)
+		:effect (and
+			(personhere)
+			))
+
+	;; waitfor_personhere2 - pre: (pos=RoomX and Kperson=RoomX and personwillcome)  post: persondhere
+	(:action waitfor_personhere
+		:parameters (?r - room)
+		:precondition (and
+				(pos ?r)
+				(Kperson ?r)
+				(personwillcome)
+			)
+		:effect (and
+			(personhere)
+			))
+
+	;; ask_drink@X - pre: personhere   post: Kdrink
+	(:action ask_drink
+		:parameters ( )
+		:precondition (and
+			(personhere)
+			)
+		:effect (and
+			(Kdrink)
+			))
+
+	;; serve_drink@X - pre: Kdrink  post: drinkserved
+	(:action serve_drink
+		:parameters ( )
+		:precondition (and
+			(Kdrink)
+			)
+		:effect (and
+			(drinkserved)
+			))
+
+	;; followperson - pre: personhere   post: personfollowed and ???forget[inapt]???
+	(:action followperson
+		:parameters ( )
+		:precondition (and
+			(personhere)
+			)
+		:effect (and
+			(personfollowed)
+			))
+
+	;; waitpersonroom2 - pre: pos=Room2 and Kpersonroom2 post: enabledph
+	(:action waitperson
+		:parameters (?r - room)
+		:precondition (and
+			(pos ?r)
+			(Kperson ?r)
+			)
+		:effect (and
+			(enabledph)
+			))
 )
 
 
