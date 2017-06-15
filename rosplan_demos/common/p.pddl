@@ -1,16 +1,13 @@
-(define (problem task2) 
+(define (problem task1) 
 (:domain robocupathome) 
-	(:objects room1 room2 room3 - room)
+	(:objects room1 room2 - room)
 
 	(:init 
-		(Kperson room2)
-		(personwillcome)
+		(cancallperson)
+		(Kperson room1)
 	)
 
 	(:goal (and
-		(wasRoom room1)
-		(wasRoom room2)
-		(personfollowed)
-		(pos room3)
+		(drinkserved)
 	)
 ))
