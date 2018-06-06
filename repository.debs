@@ -12,6 +12,7 @@ DISTRO=kinetic
 packagelist=(
   flex
   freeglut3-dev
+  ros-${DISTRO}-mongodb-store
 )
 
 ### Install debian packages listed in array above
